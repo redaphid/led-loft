@@ -5,7 +5,7 @@
 #include "./generated/LedColorMessage.pb.h"
 
 // How many leds in your strip?
-#define NUM_LEDS 256
+#define NUM_LEDS 512
 CRGB leds[NUM_LEDS]; //  Define the array of leds
 CRGB message_leds[NUM_LEDS];
 int focusedLED = 0;

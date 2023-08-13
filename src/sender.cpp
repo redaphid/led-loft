@@ -61,10 +61,10 @@ bool encode_led_colors(pb_ostream_t *stream, const pb_field_t *field, void *cons
 }
 int tick = 0;
 void loop() {
-  tick++;
-  tick = tick % 255;
+  tick+=25;
+  tick = tick % 512;
     // Create a rainbow pattern
-    Serial.println("Sending rainbow pattern");
+    // Serial.println("Sending rainbow pattern");
     for (int i = 0; i < NUM_LEDS; i++) {
         leds[i] = CHSV(i * (255 / NUM_LEDS), 255, 255);
     }
@@ -72,18 +72,17 @@ void loop() {
     LedColorMessage message = {};
     message.index = tick; // Starting index
     message.ledColors.funcs.encode = &encode_led_colors; // Set the callback for encoding
-    Serial.println("Sending offset: " + String(message.index));
+    // Serial.println("Sending offset: " + String(message.index));
     uint8_t buffer[SIZE]; // SIZE should be big enough to hold the encoded message
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, SIZE);
 
     if (pb_encode(&stream, LedColorMessage_fields, &message)) {
         // Now send the buffer over ESP-Now
-        Serial.println("Sending message");
-        Serial.println(stream.bytes_written);
+        // Serial.println("Sending message");
+        // Serial.println(stream.bytes_written);
         esp_now_send(broadcastAddress, buffer, stream.bytes_written);
     } else {
         // Handle encoding error
         Serial.println("Failed to encode message");
     }
-    delay(100);
 }
