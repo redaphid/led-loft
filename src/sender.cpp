@@ -4,7 +4,7 @@
 #include "./generated/LedColorMessage.pb.h"
 #include "pb_encode.h"
 
-#define NUM_LEDS 20
+#define NUM_LEDS 25
 #define SIZE 255
 CRGB leds[NUM_LEDS]; // Define the array of leds
 
@@ -59,8 +59,10 @@ bool encode_led_colors(pb_ostream_t *stream, const pb_field_t *field, void *cons
     }
     return true;
 }
-
+int tick = 0;
 void loop() {
+  tick++;
+  tick = tick % 255;
     // Create a rainbow pattern
     Serial.println("Sending rainbow pattern");
     for (int i = 0; i < NUM_LEDS; i++) {
@@ -68,9 +70,9 @@ void loop() {
     }
 
     LedColorMessage message = {};
-    message.index = 0; // Starting index
+    message.index = tick; // Starting index
     message.ledColors.funcs.encode = &encode_led_colors; // Set the callback for encoding
-
+    Serial.println("Sending offset: " + String(message.index));
     uint8_t buffer[SIZE]; // SIZE should be big enough to hold the encoded message
     pb_ostream_t stream = pb_ostream_from_buffer(buffer, SIZE);
 
@@ -83,4 +85,5 @@ void loop() {
         // Handle encoding error
         Serial.println("Failed to encode message");
     }
+    delay(100);
 }
