@@ -46,24 +46,7 @@ void setupESPNow() {
 
   if (uint8_t err = esp_now_add_peer(&peerInfo) != ESP_OK) {
     Serial.println("Failed to add peer");
-    if(err == ESP_ERR_ESPNOW_NOT_INIT){
-      Serial.println("ESP_ERR_ESPNOW_NOT_INIT");
-    }
-    if(err == ESP_ERR_ESPNOW_ARG){
-      Serial.println("ESP_ERR_ESPNOW_ARG");
-    }
-    if(err == ESP_ERR_ESPNOW_FULL){
-      Serial.println("ESP_ERR_ESPNOW_FULL");
-    }
-    if(err == ESP_ERR_ESPNOW_NO_MEM){
-      Serial.println("ESP_ERR_ESPNOW_NO_MEM");
-    }
-    if(err == ESP_ERR_ESPNOW_EXIST){
-      Serial.println("ESP_ERR_ESPNOW_EXIST");
-    }
-    if(esp_now_is_peer_exist(broadcastAddress)){
-      Serial.println("Peer exists");
-    }
+    backgroundColor = CRGB::Red;
     return;
   }
 }
