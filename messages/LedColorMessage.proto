@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+message SingleLEDColor {
+    required uint32 red = 1;
+    required uint32 green = 2;
+    required uint32 blue = 3;
+}
+
+message LedColorMessage {
+    required int32 index = 1;
+    repeated SingleLEDColor ledColors = 2;
+}
