@@ -5,8 +5,9 @@
 #include "./generated/LedColorMessage.pb.h"
 
 // How many leds in your strip?
-#define NUM_LEDS 1000
+#define NUM_LEDS 256
 CRGB leds[NUM_LEDS]; //  Define the array of leds
+CRGB message_leds[NUM_LEDS];
 int focusedLED = 0;
 #define DATA_PIN 26 // 26 == 7 on breadboard
 CRGB backgroundColor = CRGB::DarkBlue;
@@ -16,14 +17,7 @@ TaskHandle_t RefreshLedsTask;
 #define CHANNEL 0
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Broadcast address
 
-struct Message {
-  uint8_t r;
-  uint8_t g;
-  uint8_t b;
-};
-
-int global_startingIndex = 0;
-int global_currentLedIndex = 0;
+int decoding_led_index = 0;
 bool ledColors_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
    Serial.println("Received led color");
     SingleLEDColor ledColor;
@@ -34,8 +28,8 @@ bool ledColors_callback(pb_istream_t *stream, const pb_field_t *field, void **ar
 
     // Use `ledColor` (and potentially the arg) to store the decoded value.
     // Assuming `leds` is your array of LEDs:
-    leds[global_startingIndex + global_currentLedIndex] = CRGB(ledColor.red, ledColor.green, ledColor.blue);
-    global_currentLedIndex++;
+    message_leds[decoding_led_index] = CRGB(ledColor.red, ledColor.green, ledColor.blue);
+    decoding_led_index++;
 
     return true;
 }
@@ -46,10 +40,17 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
     LedColorMessage message = LedColorMessage_init_zero;
 
     message.ledColors.funcs.decode = &ledColors_callback;
-    global_startingIndex = message.index;
-    global_currentLedIndex = 0;
-
+    decoding_led_index = 0;
     if (pb_decode(&stream, LedColorMessage_fields, &message)) {
+        // get the index from the decoded message
+        int index = message.index;
+        // if the index is out of bounds, or if the ending index would be out of bounds, ignore the message
+        if (index < 0 || (index + decoding_led_index) > NUM_LEDS) {
+            Serial.println("Index out of bounds");
+            return;
+        }
+        // copy only the decoded LEDs from the message_leds to the leds array, starting at the index
+        memcpy(leds + index, message_leds, sizeof(CRGB) * decoding_led_index);
         FastLED.show();
     } else {
         Serial.println("Failed to decode message");
@@ -79,16 +80,6 @@ void setupESPNow() {
     return;
   }
   Serial.println("Finished setting up ESPNow");
-}
-
-CRGB getPixelFromColorPalette(int i)
-{
-  auto index = i % NUM_LEDS;
-  // return a pixel from a soft lavender to a deep purple depending on the index
-  CRGB baseColor = backgroundColor;
-  // move the baseColor ahead based on the tick
-  baseColor = blend(baseColor, CHSV(200, 255, 255), 255 * index / NUM_LEDS);
-  return baseColor;
 }
 
 void moveFocusedLed(void *parameter)
@@ -129,12 +120,14 @@ void loop()
   // for each led, fade it to the color of the led before it
   for (int i = 0; i < NUM_LEDS; i++)
   {
-    if (i > focusedLED - 5 && i < focusedLED + 5)
+   if(i == focusedLED)
     {
       leds[i] = CRGB::White;
       continue;
     }
-    leds[i] = getPixelFromColorPalette(i);
+    // fade the leds very slowly to the background color
+    leds[i].fadeToBlackBy(10);
+
   }
   FastLED.show();
 }
