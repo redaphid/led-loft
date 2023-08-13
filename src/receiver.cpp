@@ -25,6 +25,7 @@ struct Message {
 int global_startingIndex = 0;
 int global_currentLedIndex = 0;
 bool ledColors_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+   Serial.println("Received led color");
     SingleLEDColor ledColor;
 
     if (!pb_decode(stream, SingleLEDColor_fields, &ledColor)) {
@@ -40,6 +41,7 @@ bool ledColors_callback(pb_istream_t *stream, const pb_field_t *field, void **ar
 }
 
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+    Serial.println("Received data");
     pb_istream_t stream = pb_istream_from_buffer(incomingData, len);
     LedColorMessage message = LedColorMessage_init_zero;
 
@@ -51,7 +53,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
         FastLED.show();
     } else {
         Serial.println("Failed to decode message");
-
     }
 }
 void setupESPNow() {
@@ -77,6 +78,7 @@ void setupESPNow() {
     backgroundColor = CRGB::Red;
     return;
   }
+  Serial.println("Finished setting up ESPNow");
 }
 
 CRGB getPixelFromColorPalette(int i)
