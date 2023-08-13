@@ -1,6 +1,9 @@
 #include <FastLED.h>
 #include <WiFi.h>
 #include <esp_now.h>
+#include "pb_decode.h"
+#include "./generated/LedColorMessage.pb.h"
+
 // How many leds in your strip?
 #define NUM_LEDS 1000
 CRGB leds[NUM_LEDS]; //  Define the array of leds
@@ -19,13 +22,38 @@ struct Message {
   uint8_t b;
 };
 
-void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int len) {
-  // Handle incoming LED color data
-  Serial.println("Data received");
-  Message *incomingData = (Message *)data;
-  backgroundColor = CRGB(incomingData->r, incomingData->g, incomingData->b);
+int global_startingIndex = 0;
+int global_currentLedIndex = 0;
+bool ledColors_callback(pb_istream_t *stream, const pb_field_t *field, void **arg) {
+    SingleLEDColor ledColor;
+
+    if (!pb_decode(stream, SingleLEDColor_fields, &ledColor)) {
+        return false; // Failed to decode SingleLEDColor.
+    }
+
+    // Use `ledColor` (and potentially the arg) to store the decoded value.
+    // Assuming `leds` is your array of LEDs:
+    leds[global_startingIndex + global_currentLedIndex] = CRGB(ledColor.red, ledColor.green, ledColor.blue);
+    global_currentLedIndex++;
+
+    return true;
 }
 
+void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+    pb_istream_t stream = pb_istream_from_buffer(incomingData, len);
+    LedColorMessage message = LedColorMessage_init_zero;
+
+    message.ledColors.funcs.decode = &ledColors_callback;
+    global_startingIndex = message.index;
+    global_currentLedIndex = 0;
+
+    if (pb_decode(&stream, LedColorMessage_fields, &message)) {
+        FastLED.show();
+    } else {
+        Serial.println("Failed to decode message");
+
+    }
+}
 void setupESPNow() {
   Serial.println("Setting up ESPNow");
   // Initialize WiFi
