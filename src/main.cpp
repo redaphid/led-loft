@@ -21,11 +21,13 @@ struct Message {
 
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int len) {
   // Handle incoming LED color data
+  Serial.println("Data received");
   Message *incomingData = (Message *)data;
   backgroundColor = CRGB(incomingData->r, incomingData->g, incomingData->b);
 }
 
 void setupESPNow() {
+  Serial.println("Setting up ESPNow");
   // Initialize WiFi
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
@@ -37,13 +39,31 @@ void setupESPNow() {
 
   esp_now_register_recv_cb(OnDataRecv);
 
-  esp_now_peer_info_t peerInfo;
+  esp_now_peer_info_t peerInfo = {};
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
   peerInfo.channel = CHANNEL;
   peerInfo.encrypt = false;
 
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+  if (uint8_t err = esp_now_add_peer(&peerInfo) != ESP_OK) {
     Serial.println("Failed to add peer");
+    if(err == ESP_ERR_ESPNOW_NOT_INIT){
+      Serial.println("ESP_ERR_ESPNOW_NOT_INIT");
+    }
+    if(err == ESP_ERR_ESPNOW_ARG){
+      Serial.println("ESP_ERR_ESPNOW_ARG");
+    }
+    if(err == ESP_ERR_ESPNOW_FULL){
+      Serial.println("ESP_ERR_ESPNOW_FULL");
+    }
+    if(err == ESP_ERR_ESPNOW_NO_MEM){
+      Serial.println("ESP_ERR_ESPNOW_NO_MEM");
+    }
+    if(err == ESP_ERR_ESPNOW_EXIST){
+      Serial.println("ESP_ERR_ESPNOW_EXIST");
+    }
+    if(esp_now_is_peer_exist(broadcastAddress)){
+      Serial.println("Peer exists");
+    }
     return;
   }
 }
@@ -69,14 +89,17 @@ void moveFocusedLed(void *parameter)
 
 void setup()
 {
-
+  Serial.begin(115200);
+  Serial.println("Setting up");
+  delay(1000);
+  setupESPNow();
   pinMode(DATA_PIN, OUTPUT);
   xTaskCreatePinnedToCore(
       moveFocusedLed,   /* Task function. */
       "moveFocusedLed", /* name of task. */
       1000,             /* Stack size of task */
       NULL,             /* parameter of the task */
-      1,                /* priority of the task */
+      0,                /* priority of the task */
       &RefreshLedsTask, /* Task handle to keep track of created task */
       1);               /* Core */
 
